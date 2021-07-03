@@ -1,6 +1,7 @@
 import { AxiosRequestConfig, AxiosResponse, AxiosPromise } from './types'
 import { parseHeaders } from './helpers/headers'
-import { resolve } from 'dns'
+import { createError } from './helpers/error'
+import { request } from 'http'
 
 enum statusText {
   '请求未初始化',
@@ -12,7 +13,17 @@ enum statusText {
 
 export default function xhr(config: AxiosRequestConfig): AxiosPromise {
   return new Promise((resolve, reject) => {
-    const { data, params, method = 'get', url, headers, responseType, timeout } = config
+    const {
+      data,
+      params,
+      method = 'get',
+      url,
+      headers,
+      responseType,
+      timeout,
+      cancelToken,
+      withCredentials
+    } = config
     const xhr = new XMLHttpRequest()
 
     if (responseType) {
@@ -22,7 +33,7 @@ export default function xhr(config: AxiosRequestConfig): AxiosPromise {
       xhr.timeout = timeout
     }
 
-    xhr.open(method.toUpperCase(), url, true)
+    xhr.open(method.toUpperCase(), url!, true)
 
     xhr.onreadystatechange = function handleLoad() {
       if (xhr.readyState !== 4) {
@@ -54,28 +65,47 @@ export default function xhr(config: AxiosRequestConfig): AxiosPromise {
       if (response.status >= 200 && response.status <= 300) {
         resolve(response)
       } else {
-        reject(new Error(`Request failed with status code ${response.status}`))
+        reject(
+          createError(
+            `Request failed with status code ${response.status}`,
+            config,
+            null,
+            request,
+            response
+          )
+        )
       }
     }
 
     xhr.onerror = function headleError() {
       // 网络错误的情况
-      reject(new Error('Network Error'))
+      reject(createError('Network Error', config, null, request))
     }
 
     xhr.ontimeout = function hendleTimeout() {
       // 请求超时
-      reject(new Error(`Timeout of ${timeout} ms exceeded`))
+      reject(createError(`Timeout of ${timeout} ms exceeded`, config, 'ECONNABORTED', request))
     }
 
-    Object.keys(headers).forEach(name => {
-      if (data === null && name.toUpperCase() === 'CONTENT-TYPE') {
-        delete headers[name]
-      } else {
-        xhr.setRequestHeader(name, headers[name])
-      }
-    })
+    // Object.keys(headers).forEach(name => {
+    //   if (data === null && name.toUpperCase() === 'CONTENT-TYPE') {
+    //     delete headers[name]
+    //   } else {
+    //     xhr.setRequestHeader(name, headers[name])
+    //   }
+    // })
 
     xhr.send(data)
+
+    if (cancelToken) {
+      cancelToken.promise.then(reason => {
+        xhr.abort()
+        reject(reason)
+      })
+    }
+
+    if (withCredentials) {
+      xhr.withCredentials = true
+    }
   })
 }
