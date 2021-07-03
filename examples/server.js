@@ -54,9 +54,32 @@ router.get('/error/timeout', function (req, res) {
     }, 3000)
 })
 
+router.get('/extend/user', function (req, res) {
+    res.json({
+        code: 200,
+        result: {
+            name: 'xxxx',
+            age: '10'
+        },
+        msg: `hello world`
+    })
+})
+
+router.post('/config/post', function (req, res) {
+    res.json({
+        code: 200,
+        result: {
+            name: 'xxxx',
+            age: '10'
+        },
+        msg: `hello world`
+    })
+})
+
+
 app.use(router)
 
-const port = process.env.PORT || 8080
+const port = process.env.PORT || 8081
 module.exports = app.listen(port, () => {
     console.log(`Server listening on http://localhost:${port}, Ctrl+C to stop`)
 })
