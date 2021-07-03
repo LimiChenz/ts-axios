@@ -18,7 +18,7 @@ function createInstance(config: AxiosRequestConfig): AxiosStatic {
 
 const axios = createInstance(defaults)
 
-axios.create = function create(config) {
+axios.create = function create(config: AxiosRequestConfig) {
   return createInstance(mergeConfig(defaults, config!))
 }
 
